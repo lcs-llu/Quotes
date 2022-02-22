@@ -8,10 +8,18 @@
 import SwiftUI
 
 struct ContentView: View {
+    @State var currentQuote: Quote = Quote(quoteText: "", quoteAuthor: "", senderName: "", senderLink: "", quoteLink: "")
     var body: some View {
         VStack {
-            
-            Text("How do you organize a space party? You planet.")
+            VStack(spacing: 30) {
+                Text(currentQuote.quoteText)
+                HStack {
+                    Spacer()
+                    Text("- \(currentQuote.quoteAuthor)")
+                        .font(.caption)
+                        .italic()
+                }
+            }
                 .multilineTextAlignment(.leading)
                 .padding(30)
                 .overlay(
@@ -32,7 +40,7 @@ struct ContentView: View {
                 .buttonStyle(.bordered)
             
             HStack {
-                Text("Favourates")
+                Text("Favourites")
                     .bold()
                 
                 Spacer()
@@ -47,6 +55,19 @@ struct ContentView: View {
             
             Spacer()
                         
+        }
+        .task {
+            let url = URL(string: "https://api.forismatic.com/api/1.0/?method=getQuote&key=457653&format=json&lang=en")!
+            var request = URLRequest(url: url)
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+            let urlSession = URLSession.shared
+            do {
+                let (data, _) = try await urlSession.data(for: request)
+                currentQuote = try JSONDecoder().decode(Quote.self, from: data)
+            } catch {
+                print("Could not retrieve or decode the JSON from endpoint")
+                print(error)
+            }
         }
         .navigationTitle("Quotes")
         .padding()

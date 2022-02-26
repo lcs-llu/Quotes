@@ -9,10 +9,14 @@ import SwiftUI
 
 struct ContentView: View {
     @State var currentQuote: Quote = Quote(quoteText: "", quoteAuthor: "", senderName: "", senderLink: "", quoteLink: "")
+    @State var favourites: [Quote] = []
+    @State var currentQuoteAddedToFavourites: Bool = false
+    
     var body: some View {
         VStack {
             VStack(spacing: 30) {
                 Text(currentQuote.quoteText)
+                    .minimumScaleFactor(0.5)
                 HStack {
                     Spacer()
                     Text("- \(currentQuote.quoteAuthor)")
@@ -31,9 +35,19 @@ struct ContentView: View {
            Image(systemName: "heart.circle")
                 .resizable()
                 .frame(width: 40, height: 40)
+                .onTapGesture {
+                    if currentQuoteAddedToFavourites == false {
+                        favourites.append(currentQuote)
+                        currentQuoteAddedToFavourites = true
+                    }
+                }
+                .foregroundColor(currentQuoteAddedToFavourites == true ? .red : .secondary)
             
             Button(action:{
                 print("I've been pressed")
+                Task {
+                    await loadNewQuote()
+                }
             }, label: {
                 Text("Another one!")
             })
@@ -47,32 +61,35 @@ struct ContentView: View {
                 
             }
             
-            List {
-                Text("Which side of the chicken has more feathers? The outside.")
-                Text("Why did the Clydesdale give the pony a glass of water? Because he was a little horse!")
-                Text("The great thing about stationery shops is they're always in the same place...")
+            List(favourites, id: \.self) { currentQuote in
+                Text(currentQuote.quoteText)
             }
             
             Spacer()
                         
         }
         .task {
-            let url = URL(string: "https://api.forismatic.com/api/1.0/?method=getQuote&key=457653&format=json&lang=en")!
-            var request = URLRequest(url: url)
-            request.setValue("application/json", forHTTPHeaderField: "Accept")
-            let urlSession = URLSession.shared
-            do {
-                let (data, _) = try await urlSession.data(for: request)
-                currentQuote = try JSONDecoder().decode(Quote.self, from: data)
-            } catch {
-                print("Could not retrieve or decode the JSON from endpoint")
-                print(error)
-            }
+            await loadNewQuote()
+            print("Have just attempted to load a new quote.")
         }
         .navigationTitle("Quotes")
         .padding()
     }
     
+    func loadNewQuote() async {
+        let url = URL(string: "https://api.forismatic.com/api/1.0/?method=getQuote&key=457653&format=json&lang=en")!
+        var request = URLRequest(url: url)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        let urlSession = URLSession.shared
+        do {
+            let (data, _) = try await urlSession.data(for: request)
+            currentQuote = try JSONDecoder().decode(Quote.self, from: data)
+            currentQuoteAddedToFavourites = false
+        } catch {
+            print("Could not retrieve or decode the JSON from endpoint")
+            print(error)
+        }
+    }
 }
 
 struct ContentView_Previews: PreviewProvider {
